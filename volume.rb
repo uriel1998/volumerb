@@ -196,7 +196,7 @@ class Pulse
                 # Not sure why I have to pass to a subprocess to make it do, but...
                 volpercent = percentage(@volumes[sink])
                 isdefault = $defaultsink.include? @names[sink]
-                puts "#{@id[sink]}. #{@names[sink]}#{padstring(@names[sink].length)} #{@mutes[sink]}  #{volpercent}%#{isdefault ? '    *' : ''}"
+                puts "#{@id[sink]}. #{@names[sink]}#{padstring(@names[sink].length)} #{@mutes[sink] || 'no'}  #{volpercent}%#{isdefault ? '    *' : ''}"
         end
         puts "##########################################################"
   end
