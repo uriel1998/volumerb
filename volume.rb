@@ -195,11 +195,8 @@ class Pulse
                 # making volume into a percentage for humans
                 # Not sure why I have to pass to a subprocess to make it do, but...
                 volpercent = percentage(@volumes[sink])
-                if $defaultsink.include? @names[sink]
-                        puts "#{@id[sink]}. #{@names[sink]}#{padstring(@names[sink].length)} #{@mutes[sink]}  #{volpercent}%    *"
-                else
-                        puts "#{@id[sink]}. #{@names[sink]}#{padstring(@names[sink].length)} #{@mutes[sink]}  #{volpercent}%"
-                end
+                isdefault = $defaultsink.include? @names[sink]
+                puts "#{@id[sink]}. #{@names[sink]}#{padstring(@names[sink].length)} #{@mutes[sink]}  #{volpercent}%#{isdefault ? '    *' : ''}"
         end
         puts "##########################################################"
   end
