@@ -132,7 +132,8 @@ class Pulse
 
   # give me that sweet percentage value.
   def percentage(vol)
-          return vol * 100 / 65536
+          return vol * 100 / 65536 unless vol.nil?
+          return 0
   end
 
   def setdefault
