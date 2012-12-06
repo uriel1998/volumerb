@@ -200,12 +200,23 @@ class Pulse
         end
         puts "##########################################################"
   end
+  # Report out settings for default sink
+  def simple
+        # needed to get new values
+        initialize
+        @id.keys.each do |sink|
+                if $defaultsink.include? @names[sink]
+                        volpercent = percentage(@volumes[sink])
+                        puts "#{volpercent}#{@mutes[sink] == 'no' ? '%' : 'M'}"
+                end
+        end
+  end
 end
 
 # Control code
 p = Pulse.new
         unless ARGV.length > 0
-                puts "\nUsage: ruby volume.rb [0-100|up|down|toggle|mute|unmute|default] [q]\n[0-100] - set percentage of max volume for all sinks\nup|down - Increases volume on all sinks\ntoggle|mute|unmute - Sets mute on all sinks\ndefault - Select default sink from commandline\nq - quiet; no status output\n"
+                puts "\nUsage: ruby volume.rb [0-100|up|down|toggle|mute|unmute|default] [q] [s]\n[0-100] - set percentage of max volume for all sinks\nup|down - Increases volume on all sinks\ntoggle|mute|unmute - Sets mute on all sinks\ndefault - Select default sink from commandline\nq - quiet; no status output\ns - simple status output\n"
         else
                 if ARGV.first.is_number?
                         absvolume = ARGV.first.to_i
@@ -223,7 +234,10 @@ p = Pulse.new
                 end
         end
 # Always give us the results.
-        if !ARGV.include? "q"
+        if !ARGV.include? "q" and !ARGV.include? "s"
                 p.status
+        end
+        if ARGV.include? "s"
+                p.simple
         end
 end
