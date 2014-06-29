@@ -22,7 +22,9 @@
 # To do:   -Set toggle (like the q toggle) so that actions only impact
 #           current default sink
 #          -Add in toggle so simple output available for notify-osd
-
+# 20140629:uriel1998: Fixed catching of soundcard by name instead of id 
+#					  number, added termwidth cap for output, merged in
+#                     commit from xentac, and yes, I called awk.
 # 20121114:uriel1998: Added introduction/description above
 # 20121114:uriel1998: Standardized indentations
 # 20121114:uriel1998: Rewrote if/else statements into case statements
@@ -61,6 +63,7 @@ class Pulse
         @mutes = {}
         @names = {}
         @id = {}
+        @outputs = {}
         $longname = 0
 
         dump.each do |line|
@@ -77,7 +80,7 @@ class Pulse
                       @names[number] = crapstring.sub("\"","")
                       if @names[number].length > $longname
                                 $longname = @names[number].length
-                        end
+                      end
         else
                 if @names.keys.length > 0   # we already have something in the array
                         @names.keys.each do |sink|
@@ -86,6 +89,7 @@ class Pulse
                                                 when "set-default-sink" then $defaultsink = args[1].sub("alsa_output.","")  # static variable
                                                 when "set-sink-volume" then @volumes[@id[sink]] = args[2].hex
                                                 when "set-sink-mute" then @mutes[@id[sink]] = args[2]
+                                                when "set-card-profile" then @outputs[@id[sink]] = ` echo "#{args[2]}" |awk -F ':' '{ print $2 }' | awk -F '+' '{ print $1 }' `.chomp
                                         end
                                 end
                         end
@@ -137,38 +141,31 @@ class Pulse
   end
 
   def setdefault
-        @names.keys.each do |sink|
-                if $defaultsink.include? @names[sink]
-                        puts "#{@id[sink]}. #{@names[sink]} *"
-                else
-                        puts "#{@id[sink]}. #{@names[sink]}"
-                end
-        end
         puts "Which sink shall be set as default (enter the number)"
         scratch = STDIN.gets.chomp
         newdefault = scratch.to_i
-        if @id.include? newdefault
-                `pacmd set-default-sink #{newdefault}`
-
-                # Now to move all current playing stuff to the new sink....
-                dump2 = `pacmd list-sink-inputs`.lines
-                @inputs = {}
-                counter = 0
-                dump2.each do |line|
-                        args = line.split
-                        if args[0] == "index:"  # We need to find the item index for each playing stream
-                                @inputs[counter] = args[1]
-                                counter += 1
-                        end
-                end
-                # And now to shift them all to the new sink.
-                count2 = 0
-                while count2 < counter
-                        `pacmd move-sink-input #{@inputs[count2]} #{newdefault}`
-                        count2 += 1
-                end
-        else
-                puts "That input index does not exist.  You silly person."
+        @names.keys.each do |sink|
+				if newdefault.eql? @id[sink]
+						puts "Switching to #{@names[sink]}..."
+						system ("pacmd set-default-sink alsa_output.#{@names[sink]}.#{@outputs[sink]}")
+						puts "Moving current playing inputs..."
+						dump2 = `pacmd list-sink-inputs`.lines
+						@inputs = {}
+						counter = 0
+						dump2.each do |line|
+								args = line.split
+								if args[0] == "index:"  # We need to find the item index for each playing stream
+										@inputs[counter] = args[1]
+										counter += 1
+								end
+						end
+						# And now to shift them all to the new sink.
+						count2 = 0
+						while count2 < counter
+								`pacmd move-sink-input #{@inputs[count2]} alsa_output.#{@names[sink]}.#{@outputs[sink]}`
+								count2 += 1
+						end
+               end
         end
   end
 
@@ -189,16 +186,18 @@ class Pulse
   def status
         # needed to get new values
         initialize
-        puts "##Current status##########################################"
-        puts "ID  Sink Name#{padstring(11)} Mute Vol Default"
+        termwidth=`/usr/bin/env tput cols`.to_i
+        termwidth=termwidth-1
+        puts "##Current status##############################################################################".slice! 0..termwidth
+        puts "ID D  M  Vol Sink Name#{padstring(10)}   Output".slice! 0..termwidth
         @id.keys.each do |sink|
                 # making volume into a percentage for humans
                 # Not sure why I have to pass to a subprocess to make it do, but...
                 volpercent = percentage(@volumes[sink])
                 isdefault = $defaultsink.include? @names[sink]
-                puts "#{@id[sink]}. #{@names[sink]}#{padstring(@names[sink].length)} #{@mutes[sink] || 'no'}  #{volpercent}%#{isdefault ? '    *' : ''}"
+                puts "#{@id[sink]}. #{isdefault ? '*' : ' '} #{@mutes[sink] || 'no'} #{volpercent}% #{@names[sink]}#{padstring(@names[sink].length)} #{@outputs[sink]} ".slice! 0..termwidth
         end
-        puts "##########################################################"
+        puts "##############################################################################################".slice! 0..termwidth
   end
   # Report out settings for default sink
   def simple
@@ -215,6 +214,14 @@ end
 
 # Control code
 p = Pulse.new
+# Always give us the results, unless simple is desired
+        if !ARGV.include? "q" and !ARGV.include? "s"
+                p.status
+        end
+        if ARGV.include? "s"
+                p.simple
+        end
+
         unless ARGV.length > 0
                 puts "\nUsage: ruby volume.rb [0-100|up|down|toggle|mute|unmute|default] [q] [s]\n[0-100] - set percentage of max volume for all sinks\nup|down - Increases volume on all sinks\ntoggle|mute|unmute - Sets mute on all sinks\ndefault - Select default sink from commandline\nq - quiet; no status output\ns - simple status output\n"
         else
@@ -228,16 +235,9 @@ p = Pulse.new
                                 when "toggle" then p.mute_toggle
                                 when "mute" then p.mute("yes")
                                 when "unmute" then p.mute("no")
-                                when "default" then p.setdefault
+                                when "default" then p.setdefault;p.status
                                 # status not needed; it's included
                         end
                 end
-        end
-# Always give us the results.
-        if !ARGV.include? "q" and !ARGV.include? "s"
-                p.status
-        end
-        if ARGV.include? "s"
-                p.simple
         end
 end
