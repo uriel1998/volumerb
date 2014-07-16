@@ -22,6 +22,7 @@
 # To do:   -Set toggle (like the q toggle) so that actions only impact
 #           current default sink
 #          -Add in toggle so simple output available for notify-osd
+# 20140716:uriel1998: Whoops. Fixed output so it presents right info 
 # 20140629:uriel1998: Fixed catching of soundcard by name instead of id 
 #					  number, added termwidth cap for output, merged in
 #                     commit from xentac, and yes, I called awk.
@@ -199,6 +200,7 @@ class Pulse
         end
         puts "##############################################################################################".slice! 0..termwidth
   end
+
   # Report out settings for default sink
   def simple
         # needed to get new values
@@ -215,14 +217,11 @@ end
 # Control code
 p = Pulse.new
 # Always give us the results, unless simple is desired
-        if !ARGV.include? "q" and !ARGV.include? "s"
-                p.status
-        end
         if ARGV.include? "s"
                 p.simple
         end
-
         unless ARGV.length > 0
+				p.status
                 puts "\nUsage: ruby volume.rb [0-100|up|down|toggle|mute|unmute|default] [q] [s]\n[0-100] - set percentage of max volume for all sinks\nup|down - Increases volume on all sinks\ntoggle|mute|unmute - Sets mute on all sinks\ndefault - Select default sink from commandline\nq - quiet; no status output\ns - simple status output\n"
         else
                 if ARGV.first.is_number?
@@ -235,9 +234,12 @@ p = Pulse.new
                                 when "toggle" then p.mute_toggle
                                 when "mute" then p.mute("yes")
                                 when "unmute" then p.mute("no")
-                                when "default" then p.setdefault;p.status
-                                # status not needed; it's included
+                                when "default" then p.status;p.setdefault
                         end
                 end
+								if !ARGV.include? "q" and !ARGV.include? "s"
+									p.status
+								end                                # status not needed; it's included
+
         end
 end
