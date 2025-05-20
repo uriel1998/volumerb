@@ -4,7 +4,9 @@
 #
 #  Volume control script for use with pipewire uses wpctl
 #  (c) Steven Saus 2025
-#  Licensed under the MIT license
+# This work is licensed under the Creative Commons Attribution-ShareAlike 3.0
+# Unported License. To view a copy of this license, visit
+# http://creativecommons.org/licenses/by-sa/3.0/.
 #
 ##############################################################################
 
