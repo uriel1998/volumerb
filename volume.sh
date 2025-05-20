@@ -99,8 +99,12 @@ case "${1}" in
         exit
         ;;
     toggle)
-        wpctl set-mute "${DEFAULTSINKNUMBER}" toggle
-        wpctl set-mute "${ACTIVESINKNUMBER}" toggle
+        if [ "${DEFAULTSINKNUMBER}" == "${ACTIVESINKNUMBER}" ];then
+            wpctl set-mute "${DEFAULTSINKNUMBER}" toggle
+        else
+            wpctl set-mute "${DEFAULTSINKNUMBER}" toggle
+            wpctl set-mute "${ACTIVESINKNUMBER}" toggle
+        fi
         exit
         ;;
     mute)
